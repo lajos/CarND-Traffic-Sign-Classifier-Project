@@ -218,6 +218,26 @@ def fully_connected_relu(input, n_output):
 
 #---------------------------------------------------------------------
 
+def preprocess_data(X_train, X_valid, X_test):
+    # X_train_norm = np.array([img_equalize_adapthist(img_rgb2LNorm(xi)) for xi in X_train])[:,:,:,None]
+    # X_valid_norm = np.array([img_equalize_adapthist(img_rgb2LNorm(xi)) for xi in X_valid])[:,:,:,None]
+    # X_test_norm = np.array([img_equalize_adapthist(img_rgb2LNorm(xi)) for xi in X_test])[:,:,:,None]
+    X_train_norm = np.array([img_rgb2LNorm(xi) for xi in X_train])[:,:,:,None]
+    X_valid_norm = np.array([img_rgb2LNorm(xi) for xi in X_valid])[:,:,:,None]
+    X_test_norm = np.array([img_rgb2LNorm(xi) for xi in X_test])[:,:,:,None]
+    return (X_train_norm, X_valid_norm, X_test_norm)
+
+#---------------------------------------------------------------------
+
+def save_data(path, prefix, X_train, X_valid, X_test, y_train, y_valid, y_test):
+    with open('{}/{}_train.p'.format(path,prefix), 'wb') as handle:
+        pickle.dump({'features':X_train, 'labels':y_train}, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    with open('{}/{}_valid.p'.format(path,prefix), 'wb') as handle:
+        pickle.dump({'features':X_valid, 'labels':y_valid}, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    with open('{}/{}_test.p'.format(path,prefix), 'wb') as handle:
+        pickle.dump({'features':X_test, 'labels':y_test}, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+#---------------------------------------------------------------------
 
 def lenet_model(x):
     with tf.variable_scope('cr1'):
@@ -286,17 +306,13 @@ def training_model(x):
 
     return(fc3)
 
-X_train_norm = np.array([img_equalize_adapthist(img_rgb2LNorm(xi)) for xi in X_train])
-X_valid_norm = np.array([img_equalize_adapthist(img_rgb2LNorm(xi)) for xi in X_valid])
-X_test_norm = np.array([img_equalize_adapthist(img_rgb2LNorm(xi)) for xi in X_test])
+X_train, X_valid, X_test = preprocess_data(X_train, X_valid, X_test)
+save_data('./traffic-signs-data','n',X_train, X_valid, X_test, y_train, y_valid, y_test)
+
+# import sys
+# sys.exit(0)
 
 print("--- data norm: %s seconds ---" % (time.time() - start_time))
-
-X_train = X_train_norm[:,:,:,None]
-X_validation = X_valid_norm[:,:,:,None]
-X_test = X_test_norm[:,:,:,None]
-
-y_validation = y_valid
 
 from sklearn.utils import shuffle
 X_train, y_train = shuffle(X_train, y_train)
@@ -343,7 +359,7 @@ with tf.Session() as sess:
             batch_x, batch_y = X_train[offset:end], y_train[offset:end]
             sess.run(training_operation, feed_dict={x: batch_x, y: batch_y})
 
-        validation_accuracy = evaluate(X_validation, y_validation)
+        validation_accuracy = evaluate(X_valid, y_valid)
         print("EPOCH {} ...".format(i+1))
         print("Validation Accuracy = {:.3f}".format(validation_accuracy))
         print()

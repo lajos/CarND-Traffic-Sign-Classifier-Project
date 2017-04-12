@@ -5,6 +5,8 @@ models
 *.swp
 *.p
 
+.vscode/
+
 traffic-signs-data/
 train-sessions/
 
