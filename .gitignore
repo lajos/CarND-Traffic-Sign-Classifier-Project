@@ -5,6 +5,8 @@ models
 *.swp
 *.p
 
+__pycache__/
+
 .vscode/
 
 traffic-signs-data/
