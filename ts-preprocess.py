@@ -350,13 +350,13 @@ with tf.Session() as sess:
 
     print("--- training: %s seconds ---" % (time.time() - start_time))
 
-    saver.save(sess, './lenet')
+    saver.save(sess, './train-sessions/session')
     print("Model saved")
 
 print("--- saving: %s seconds ---" % (time.time() - start_time))
 
 with tf.Session() as sess:
-    saver.restore(sess, tf.train.latest_checkpoint('.'))
+    saver.restore(sess, tf.train.latest_checkpoint('./train-sessions'))
 
     test_accuracy = evaluate(X_test, y_test)
     print("Test Accuracy = {:.3f}".format(test_accuracy))
