@@ -177,7 +177,8 @@ def img_rotate_240(img):
 
 def img_project_random(img, max_distance=5):
     """ projection transformation, moving each corner max_distance pixels from original """
-    w,h=img.shape
+    w=img.shape[0]
+    h=img.shape[1]
     matrix = np.array(((0,0),(0,h),(w,h),(w,0)))
     projection = skimage.transform.ProjectiveTransform()
     projection.estimate(matrix+(2.*np.random.rand(matrix.size).reshape(matrix.shape)-1)*max_distance,matrix)
@@ -197,17 +198,19 @@ def img_equalize_adapthist(img):
         img = skimage.exposure.equalize_adapthist(img)
     return(img)
 
-def img_median(img, size=5):
+def img_median(img, size=1):
+    img=img.reshape(img.shape[0],img.shape[1])
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         img = 1-skimage.filters.rank.median(img, skimage.morphology.disk(size))
-    return(img)
+    return(img[:,:,None])
 
-def img_threshold_local(img, size=5):
+def img_threshold_local(img, size=1):
+    img=img.reshape(img.shape[0],img.shape[1])
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         img = skimage.filters.threshold_local(img, size, method='gaussian')
-    return(img)
+    return(img[:,:,None])
 
 def img_random_noise(img):
     with warnings.catch_warnings():
@@ -431,20 +434,100 @@ def augment_flip_rotate(x,y):
     # plt.show()
     return(x,y)
 
+
+#---------------------------------------------------------------------
+import random
+
+def augment_filter_class(x, y, c_id, c_index, c_count, aug_count):
+    print("filter augment:",c_id, c_index, c_count, aug_count)
+
+    if aug_count==0:
+        return x,y
+
+    new_images = []
+    for i in range(aug_count):
+        src_index = random.randrange(c_index, c_index+c_count)
+
+        img = img_project_random(x[src_index], max_distance=random.randrange(1,7))
+        if (random.random()<0.1):
+            img = img_median(img, size=1)
+        if (random.random()<0.2):
+            img = img_threshold_local(img, size=random.randrange(1,4,2))
+        if (random.random()<0.1):
+            img = img_random_noise(img)
+
+        if not len(new_images):
+            new_images = img[None,:]
+        else:
+            new_images=np.append(new_images,img[None,:],axis=0)
+
+    new_ids = np.full(aug_count,c_id)
+
+    # showArray(new_images[0])
+    # print('new_id',new_ids[0])
+    # print(new_images.shape)
+    # print(new_ids.shape)
+
+    x=np.concatenate((x,new_images),axis=0)
+    y=np.concatenate((y,new_ids),axis=0)
+
+    return x,y
+
+def augment_filter(x,y,max_samples=-1):
+    """if max_sample==-1, augment to largest class count"""
+    classes_id, classes_first_index, classes_count = np.unique(y, return_counts=True, return_index=True)
+    if max_samples==-1:
+        max_samples = np.max(classes_count)
+    for c_id, c_index, c_count in zip (classes_id, classes_first_index, classes_count):
+        aug_count = max_samples - c_count
+        x,y=augment_filter_class(x, y, c_id, c_index, c_count, aug_count)
+
+    classes_id, classes_first_index, classes_count = np.unique(y, return_counts=True, return_index=True)
+    # plt.bar(np.arange(classes_count.size), classes_count, label='n_samples')
+    # plt.show()
+    return(x,y)
+
+
 #---------------------------------------------------------------------
 
-# preprocess/save data
+def get_y_imbalance_weights(y):
+    classes_id, classes_first_index, classes_count = np.unique(y, return_counts=True, return_index=True)
+    print('min samples per class: ',np.min(classes_count))
+    print('max samples per class: ',np.max(classes_count))
+    w = np.min(classes_count)/classes_count
+    print(classes_count)
+    print(w)
+    return w
+
+
+#---------------------------------------------------------------------
+
+start_time = time.time()
+
+# preprocess/save data (convert to L(ab), equalize)
+#
 # X_train, X_valid, X_test = preprocess_data(X_train, X_valid, X_test)
 # save_data(_data_path,'n_ea',X_train, X_valid, X_test, y_train, y_valid, y_test)
 # sys.exit(0)
 
+# flip rotate augment
+#
 # X_train, X_valid, X_test, y_train, y_valid, y_test = load_data(_data_path, 'n_ea')
 # print(X_train.shape,y_train.shape)
-# augment_flip_rotate(X_train,y_train)
-
+# X_train,y_train = augment_flip_rotate(X_train,y_train)
 # save_data(_data_path,'n_ea_fr',X_train, X_valid, X_test, y_train, y_valid, y_test)
 
-# sys.exit(0)
+# filter augment
+#
+X_train, X_valid, X_test, y_train, y_valid, y_test = load_data(_data_path, 'n_ea_fr')
+print(X_train.shape,y_train.shape)
+X_train,y_train = augment_filter(X_train,y_train)
+print(X_train.shape,y_train.shape)
+save_data(_data_path,'n_ea_fr_f',X_train, X_valid, X_test, y_train, y_valid, y_test)
+
+print("--- processing time: %s seconds ---" % (time.time() - start_time))
+
+sys.exit(0)
 
 #---------------------------------------------------------------------
 
@@ -479,7 +562,11 @@ y_one_hot = tf.one_hot(y, n_classes)
 
 logits = build_network(x,enable_dropout, _c)
 
-cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=y_one_hot, logits=logits)
+
+
+#cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=y_one_hot, logits=logits)
+cross_entropy = tf.nn.sigmoid_cross_entropy_with_logits(labels=y_one_hot, logits=logits)
+#cross_entropy = tf.nn.weighted_cross_entropy_with_logits(targets=y_one_hot, logits=logits, pos_weight=get_y_imbalance_weights(y_train))
 loss_operation = tf.reduce_mean(cross_entropy)
 optimizer = tf.train.AdamOptimizer(learning_rate = _c['learn_rate'])
 training_operation = optimizer.minimize(loss_operation)
