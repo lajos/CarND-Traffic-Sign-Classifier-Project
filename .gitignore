@@ -6,4 +6,5 @@ models
 *.p
 
 traffic-signs-data/
+train-sessions/
 
