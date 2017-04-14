@@ -1,1 +1,2 @@
-for /l %%x in (0, 1, 40) do python ts-preprocess.py %%x
+rem (first,step,last)
+for /l %%x in (33, 1, 111) do python ts-preprocess.py %%x
