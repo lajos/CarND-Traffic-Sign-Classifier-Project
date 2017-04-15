@@ -4,7 +4,7 @@ import time
 import json
 import cv2
 
-DISABLE_GPU = False
+DISABLE_GPU = True
 import os
 if DISABLE_GPU:
     os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
@@ -291,6 +291,14 @@ def load_data(path, prefix):
     X_valid, y_valid = valid['features'], valid['labels']
     X_test, y_test = test['features'], test['labels']
     return(X_train, X_valid, X_test, y_train, y_valid, y_test)
+
+#---------------------------------------------------------------------
+
+def load_www_data(path, prefix):
+    with open('{}/{}_www.p'.format(path, prefix), 'rb') as handle:
+        www = pickle.load(handle)
+    X_www, y_www = www['features'], www['labels']
+    return(X_www, y_www)
 
 #---------------------------------------------------------------------
 
@@ -615,7 +623,10 @@ else:
     _c=configs[-1]
 print(_c)
 
+_c['prefix']='n_ea'
+
 X_train, X_valid, X_test, y_train, y_valid, y_test = load_data(_data_path, _c['prefix'])
+X_www, y_www = load_www_data(_data_path, 'n_ea')
 
 from sklearn.utils import shuffle
 X_train, y_train = shuffle(X_train, y_train)
@@ -668,9 +679,21 @@ def evaluate(X_data, y_data):
     sess = tf.get_default_session()
     for offset in range(0, num_examples, BATCH_SIZE):
         batch_x, batch_y = X_data[offset:offset+BATCH_SIZE], y_data[offset:offset+BATCH_SIZE]
-        accuracy = sess.run(accuracy_operation, feed_dict={x: batch_x, y: batch_y, enable_dropout: False})
+        correct, accuracy = sess.run((correct_prediction, accuracy_operation), feed_dict={x: batch_x, y: batch_y, enable_dropout: False})
+        # print(correct)
+        # for i in range(correct.size):
+        #     if not correct[i]:
+        #         print('missed:',i+1)
         total_accuracy += (accuracy * len(batch_x))
     return total_accuracy / num_examples
+
+#---- www test -------
+with tf.Session() as sess:
+    saver.restore(sess, tf.train.latest_checkpoint('./train-sessions'))
+    test_accuracy = evaluate(X_www, y_www)
+    print("www Test Accuracy = {:.3f}".format(test_accuracy))
+sys.exit(0)
+#---------------------
 
 validation_log = []
 test_log = []
