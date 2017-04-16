@@ -4,7 +4,7 @@ import time
 import json
 import cv2
 
-DISABLE_GPU = True
+DISABLE_GPU = False
 import os
 if DISABLE_GPU:
     os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
@@ -688,11 +688,11 @@ def evaluate(X_data, y_data):
     return total_accuracy / num_examples
 
 #---- www test -------
-with tf.Session() as sess:
-    saver.restore(sess, tf.train.latest_checkpoint('./train-sessions'))
-    test_accuracy = evaluate(X_www, y_www)
-    print("www Test Accuracy = {:.3f}".format(test_accuracy))
-sys.exit(0)
+# with tf.Session() as sess:
+#     saver.restore(sess, tf.train.latest_checkpoint('./train-sessions'))
+#     test_accuracy = evaluate(X_www, y_www)
+#     print("www Test Accuracy = {:.3f}".format(test_accuracy))
+# sys.exit(0)
 #---------------------
 
 validation_log = []
