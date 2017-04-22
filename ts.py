@@ -146,8 +146,8 @@ def img_rotate_120(img):
 def img_rotate_240(img):
     return skimage.transform.rotate(img, 240, mode='edge')
 
-def img_project_random(img, max_distance=5):
-    """ projection transformation, moving each corner max_distance pixels from original """
+def img_quadmap(img, max_distance=5):
+    """ quadmap transformation, moving each corner max_distance pixels from original """
     w=img.shape[0]
     h=img.shape[1]
     matrix = np.array(((0,0),(0,h),(w,h),(w,0)))
@@ -335,7 +335,7 @@ def lenet_model(x):
 #---------------------------------------------------------------------
 
 
-def build_network(x, enable_dropout, config):
+def build_model(x, enable_dropout, config):
     _=config
     k, fcr1_size, fcr2_size, cr1_d, cr2_d, cr3_d = (_['k'],_['fcr1_size'],_['fcr2_size'],_['cr1_d'],_['cr2_d'],_['cr3_d'])
     cr1_drop, cr2_drop, cr3_drop, fcr1_drop, fcr2_drop = (_['cr1_drop'], _['cr2_drop'], _['cr3_drop'], _['fcr1_drop'], _['fcr2_drop'])
@@ -344,22 +344,26 @@ def build_network(x, enable_dropout, config):
         cr1 = convolution_relu(x, K=k, S=1, D=cr1_d, padding='SAME')
         print('cr1 shape:', cr1.shape)
         cr1 = pool(cr1, 2)
+        print('cr1p shape:', cr1.shape)
         cr1 = tf.cond(enable_dropout, lambda: dropout(cr1, keep_prob=cr1_drop), lambda: cr1)
 
     with tf.variable_scope('cr2'):
         cr2 = convolution_relu(cr1, K=k, S=1, D=cr2_d, padding='SAME')
         print('cr2 shape:', cr2.shape)
         cr2 = pool(cr2, 2)
+        print('cr2p shape:', cr2.shape)
         cr2 = tf.cond(enable_dropout, lambda: dropout(cr2, keep_prob=cr2_drop), lambda: cr2)
 
     with tf.variable_scope('cr3'):
         cr3 = convolution_relu(cr2, K=k, S=1, D=cr3_d, padding='SAME')
         print('cr3 shape:', cr3.shape)
         cr3 = pool(cr3, 2)
+        print('cr3p shape:', cr3.shape)
         cr3 = tf.cond(enable_dropout, lambda: dropout(cr3, keep_prob=cr3_drop), lambda: cr3)
 
-    flat = tf.concat((flatten(cr1),flatten(cr2),flatten(cr3)),1)
-    print('flat shape:', flat.shape)
+    with tf.variable_scope('flat'):
+        flat = tf.concat((flatten(cr1),flatten(cr2),flatten(cr3)),1)
+        print('flat shape:', flat.shape)
 
     with tf.variable_scope('fcr1'):
         fcr1 = fully_connected_relu(flat, fcr1_size)
@@ -378,6 +382,65 @@ def build_network(x, enable_dropout, config):
     logits = fc3
 
     return(logits)
+
+#---------------------------------------------------------------------
+
+
+def build_model_long(x, enable_dropout, config):
+    _=config
+    k, fcr1_size, fcr2_size, cr1_d, cr2_d, cr3_d, cr4_d = (_['k'],_['fcr1_size'],_['fcr2_size'],_['cr1_d'],_['cr2_d'],_['cr3_d'],_['cr4_d'])
+    cr1_drop, cr2_drop, cr3_drop, cr4_drop, fcr1_drop, fcr2_drop = (_['cr1_drop'], _['cr2_drop'], _['cr3_drop'], _['cr4_drop'], _['fcr1_drop'], _['fcr2_drop'])
+
+    with tf.variable_scope('cr1'):
+        cr1 = convolution_relu(x, K=k, S=1, D=cr1_d, padding='SAME')
+        print('cr1 shape:', cr1.shape)
+        cr1 = pool(cr1, 2)
+        print('cr1p shape:', cr1.shape)
+        cr1 = tf.cond(enable_dropout, lambda: dropout(cr1, keep_prob=cr1_drop), lambda: cr1)
+
+    with tf.variable_scope('cr2'):
+        cr2 = convolution_relu(cr1, K=k, S=1, D=cr2_d, padding='SAME')
+        print('cr2 shape:', cr2.shape)
+        cr2 = pool(cr2, 2)
+        print('cr2p shape:', cr2.shape)
+        cr2 = tf.cond(enable_dropout, lambda: dropout(cr2, keep_prob=cr2_drop), lambda: cr2)
+
+    with tf.variable_scope('cr3'):
+        cr3 = convolution_relu(cr2, K=k, S=1, D=cr3_d, padding='SAME')
+        print('cr3 shape:', cr3.shape)
+        cr3 = pool(cr3, 2)
+        print('cr3p shape:', cr3.shape)
+        cr3 = tf.cond(enable_dropout, lambda: dropout(cr3, keep_prob=cr3_drop), lambda: cr3)
+
+    with tf.variable_scope('cr4'):
+        cr4 = convolution_relu(cr3, K=k, S=1, D=cr4_d, padding='SAME')
+        print('cr4 shape:', cr4.shape)
+        cr4 = pool(cr4, 2)
+        print('cr4p shape:', cr4.shape)
+        cr4 = tf.cond(enable_dropout, lambda: dropout(cr4, keep_prob=cr4_drop), lambda: cr4)
+
+    with tf.variable_scope('flat'):
+        flat = tf.concat((flatten(cr1),flatten(cr2),flatten(cr3),flatten(cr4)),1)
+        print('flat shape:', flat.shape)
+
+    with tf.variable_scope('fcr1'):
+        fcr1 = fully_connected_relu(flat, fcr1_size)
+        print('fcr1 shape:', fcr1.shape)
+        fcr1 = tf.cond(enable_dropout, lambda: dropout(fcr1, keep_prob=fcr1_drop), lambda: fcr1)
+
+    with tf.variable_scope('fcr2'):
+        fcr2 = fully_connected_relu(fcr1, fcr2_size)
+        print('fcr2 shape:', fcr2.shape)
+        fcr2 = tf.cond(enable_dropout, lambda: dropout(fcr2, keep_prob=fcr2_drop), lambda: fcr2)
+
+    with tf.variable_scope('fc3'):
+        fc3 = fully_connected(fcr2, 43)
+        print('fc3 shape:', fc3.shape)
+
+    logits = fc3
+
+    return(logits)
+
 
 #---------------------------------------------------------------------
 
@@ -508,7 +571,7 @@ def augment_filter_class(x, y, c_id, c_index, c_count, aug_count):
 
         img = x[src_index]
 
-        img = img_project_random(img, max_distance=5)               # normal (1,7)  large (1,11)
+        img = img_quadmap(img, max_distance=5)               # normal (1,7)  large (1,11)
         img = img_rotate_random(img, degrees=5)                    # normal (0,10) large (0,20)
         img = img_scale_random(img, scale_diff=0.1)                # normal (0,0.2) large (0,0.4)
 
@@ -623,7 +686,7 @@ else:
     _c=configs[-1]
 print(_c)
 
-_c['prefix']='n_ea'
+_c['prefix']='n_ea_fr_f'
 
 X_train, X_valid, X_test, y_train, y_valid, y_test = load_data(_data_path, _c['prefix'])
 X_www, y_www = load_www_data(_data_path, 'n_ea')
@@ -637,40 +700,46 @@ image_h = image_shape[1]
 classes_id, classes_first_index, classes_count = np.unique(y_train, return_counts=True, return_index=True)
 n_classes=classes_id.size
 
-x = tf.placeholder(tf.float32, (None, image_w, image_h, 1))
-y = tf.placeholder(tf.int32, (None))
-enable_dropout = tf.placeholder(tf.bool)
+with tf.name_scope('input'):
+    x = tf.placeholder(tf.float32, (None, image_w, image_h, 1))
+    y = tf.placeholder(tf.int32, (None))
+    enable_dropout = tf.placeholder(tf.bool)
 y_one_hot = tf.one_hot(y, n_classes)
 
-logits = build_network(x,enable_dropout, _c)
+logits = build_model_long(x,enable_dropout, _c)
 
-cr1_weights = get_scope_variable('cr1', 'weights')
-cr2_weights = get_scope_variable('cr2', 'weights')
-cr3_weights = get_scope_variable('cr3', 'weights')
-fcr1_weights = get_scope_variable('fcr1', 'weights')
-fcr2_weights = get_scope_variable('fcr2', 'weights')
-fc3_weights = get_scope_variable('fc3', 'weights')
 
-#l2_weights = [cr1_weights, cr2_weights, cr3_weights, fcr1_weights, fcr2_weights, fc3_weights]
+with tf.name_scope('cross_entropy'):
+    #cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=y_one_hot, logits=logits)
+    cross_entropy = tf.nn.sigmoid_cross_entropy_with_logits(labels=y_one_hot, logits=logits)
+    #cross_entropy = tf.nn.weighted_cross_entropy_with_logits(targets=y_one_hot, logits=logits, pos_weight=get_y_imbalance_weights(y_train))
 
-#l2_weights = [cr1_weights, cr2_weights, cr3_weights]
+with tf.name_scope('L2_regulation'):
+    cr1_weights = get_scope_variable('cr1', 'weights')
+    cr2_weights = get_scope_variable('cr2', 'weights')
+    cr3_weights = get_scope_variable('cr3', 'weights')
+    fcr1_weights = get_scope_variable('fcr1', 'weights')
+    fcr2_weights = get_scope_variable('fcr2', 'weights')
+    fc3_weights = get_scope_variable('fc3', 'weights')
+    #l2_weights = [cr1_weights, cr2_weights, cr3_weights, fcr1_weights, fcr2_weights, fc3_weights]
+    #l2_weights = [cr1_weights, cr2_weights, cr3_weights]
+    l2_weights = [fcr1_weights, fcr2_weights, fc3_weights]
+    loss_operation = tf.reduce_mean(cross_entropy)
+    for w in l2_weights:
+        loss_operation = loss_operation + 0.0001*tf.nn.l2_loss(w)
 
-l2_weights = [fcr1_weights, fcr2_weights, fc3_weights]
 
-#cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=y_one_hot, logits=logits)
-cross_entropy = tf.nn.sigmoid_cross_entropy_with_logits(labels=y_one_hot, logits=logits)
-#cross_entropy = tf.nn.weighted_cross_entropy_with_logits(targets=y_one_hot, logits=logits, pos_weight=get_y_imbalance_weights(y_train))
+with tf.name_scope('optimizer'):
+    optimizer = tf.train.AdamOptimizer(learning_rate = _c['learn_rate'])
+    training_operation = optimizer.minimize(loss_operation)
 
-loss_operation = tf.reduce_mean(cross_entropy)
+with tf.name_scope('accuracy'):
+    correct_prediction = tf.equal(tf.argmax(logits, 1), tf.argmax(y_one_hot, 1))
+    accuracy_operation = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
-for w in l2_weights:
-    loss_operation = loss_operation + 0.0001*tf.nn.l2_loss(w)
+tf.summary.scalar("cost", loss_operation)
+tf.summary.scalar("train_accuracy", accuracy_operation)
 
-optimizer = tf.train.AdamOptimizer(learning_rate = _c['learn_rate'])
-training_operation = optimizer.minimize(loss_operation)
-
-correct_prediction = tf.equal(tf.argmax(logits, 1), tf.argmax(y_one_hot, 1))
-accuracy_operation = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 saver = tf.train.Saver()
 
 def evaluate(X_data, y_data):
@@ -702,6 +771,11 @@ test_accuracy=0
 
 start_time = time.time()
 
+writer = tf.summary.FileWriter(logdir='tensorboard', graph=tf.get_default_graph())
+writer.flush()
+
+summary_op = tf.summary.merge_all()
+
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
     num_examples = len(X_train)
@@ -713,7 +787,9 @@ with tf.Session() as sess:
         for offset in range(0, num_examples, BATCH_SIZE):
             end = offset + BATCH_SIZE
             batch_x, batch_y = X_train[offset:end], y_train[offset:end]
-            sess.run(training_operation, feed_dict={x: batch_x, y: batch_y, enable_dropout: True})
+            _, summary = sess.run([training_operation, summary_op], feed_dict={x: batch_x, y: batch_y, enable_dropout: True})
+
+            writer.add_summary(summary, (i + offset/num_examples)*1000)
 
         validation_accuracy = evaluate(X_valid, y_valid)
         validation_log.append(validation_accuracy)

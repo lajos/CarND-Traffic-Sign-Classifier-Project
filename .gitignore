@@ -10,5 +10,9 @@ __pycache__/
 .vscode/
 
 traffic-signs-data/
+train-sessions-jupyter/
 train-sessions/
+tensorflow/
+
+*.zip
 

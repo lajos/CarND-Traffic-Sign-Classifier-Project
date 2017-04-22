@@ -144,8 +144,10 @@ configs = [
     {'name':'105','prefix':'n_ea_fr_f', 'epochs':64, 'learn_rate':0.0007, 'k':3, 'fcr1_size':4096, 'fcr2_size':1024, 'cr1_d':32, 'cr2_d':64, 'cr3_d':128, 'cr1_drop':0.6, 'cr2_drop':0.5, 'cr3_drop':0.6, 'fcr1_drop':0.6, 'fcr2_drop':0.7 },
 
     # softmax
-    {'106':'_dev_','prefix':'n_ea_fr_f', 'epochs':128, 'learn_rate':0.0007, 'k':3, 'fcr1_size':4096, 'fcr2_size':1024, 'cr1_d':64, 'cr2_d':128, 'cr3_d':256, 'cr1_drop':0.6, 'cr2_drop':0.5, 'cr3_drop':0.6, 'fcr1_drop':0.6, 'fcr2_drop':0.7 },
+    {'name':'106','prefix':'n_ea_fr_f', 'epochs':128, 'learn_rate':0.0007, 'k':3, 'fcr1_size':4096, 'fcr2_size':1024, 'cr1_d':64, 'cr2_d':128, 'cr3_d':256, 'cr1_drop':0.6, 'cr2_drop':0.5, 'cr3_drop':0.6, 'fcr1_drop':0.6, 'fcr2_drop':0.7 },
 
-    {'name':'_dev_','prefix':'n_ea_fr_f', 'epochs':256, 'learn_rate':0.0007, 'k':3, 'fcr1_size':4096, 'fcr2_size':1024, 'cr1_d':64, 'cr2_d':128, 'cr3_d':256, 'cr1_drop':0.6, 'cr2_drop':0.5, 'cr3_drop':0.6, 'fcr1_drop':0.6, 'fcr2_drop':0.7 }
+    {'name':'107','prefix':'n_ea_fr_f', 'epochs':256, 'learn_rate':0.0007, 'k':3, 'fcr1_size':4096, 'fcr2_size':1024, 'cr1_d':64, 'cr2_d':128, 'cr3_d':256, 'cr1_drop':0.6, 'cr2_drop':0.5, 'cr3_drop':0.6, 'fcr1_drop':0.6, 'fcr2_drop':0.7 },
+
+    {'name':'_dev_','prefix':'n_ea_fr_f', 'epochs':128, 'learn_rate':0.0007, 'k':3, 'fcr1_size':4096, 'fcr2_size':1024, 'cr1_d':64, 'cr2_d':128, 'cr3_d':256, 'cr4_d':512, 'cr1_drop':0.6, 'cr2_drop':0.5, 'cr3_drop':0.6,'cr4_drop':0.6, 'fcr1_drop':0.6, 'fcr2_drop':0.7 }
 
 ]
